@@ -42,14 +42,11 @@ public:
   void UpdateError(double cte);
 
   /*
-   * Calculate suitable steering angle given the cte collected so far
+   * Calculate suitable input value given the cte collected so far.
+   * 
+   * Value will be clamped within [min, max].
    */
-  double GetSteeringAngle();
-
-  /*
-   * Calculate suitable throttle given the current speed and cte collected so far
-   */
-  double GetThrottle(double speed);
+  double GetInputValue(double min, double max);
 
   /*
   * Calculate the total PID error.

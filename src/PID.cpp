@@ -44,19 +44,15 @@ void PID::UpdateError(double cte) {
   
 }
 
-double PID::GetSteeringAngle() {
-  double steering = -(Kp * p_error + Ki * i_error + Kd * d_error);
-  if (steering > 1) {
-    steering = 1;
+double PID::GetInputValue(double min, double max) {
+  double val = -(Kp * p_error + Ki * i_error + Kd * d_error);
+  if (val > max) {
+    val = max;
   }
-  if (steering < -1) {
-    steering = -1;
+  if (val < min) {
+    val = min;
   }
-  return steering;
-}
-
-double PID::GetThrottle(double speed) {
-  return speed > 5 ? 0 : 0.3;
+  return val;
 }
 
 double PID::TotalError() {
