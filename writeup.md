@@ -39,7 +39,7 @@ Below's a figure for PD controller CTE-Updates graph with different Kd.
 
 ![Comparison of different Kd][pd] 
 
-For overkilling D component, it will affect the system in another manner. Here's a video clip for D component getter too large. (5x the optimal Kd)
+For D component that overkills, it will affect the system in another manner. Here's a video clip for D component getter too large. (5x the optimal Kd)
 
 ![When D component is too large][pd-too-big-d]
 
