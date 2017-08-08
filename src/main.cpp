@@ -10,10 +10,14 @@ using json = nlohmann::json;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
+
 double deg2rad(double x) { return x * pi() / 180; }
+
 double rad2deg(double x) { return x * 180 / pi(); }
-static bool enable_twiddling = true;
+
+static bool enable_twiddling = false;
 static int i = 0;
+static double total_square_error = 0;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -24,134 +28,118 @@ std::string hasData(std::string s) {
   auto b2 = s.find_last_of("]");
   if (found_null != std::string::npos) {
     return "";
-  }
-  else if (b1 != std::string::npos && b2 != std::string::npos) {
+  } else if (b1 != std::string::npos && b2 != std::string::npos) {
     return s.substr(b1, b2 - b1 + 1);
   }
   return "";
 }
 
-int main()
-{
+int main() {
   uWS::Hub h;
 
   PID pid_steering;
   PID pid_speed;
-  // TODO: Initialize the pid variable.
-  pid_steering.Init(0.8, 0.01, 10);
-  // pid_steering.Init(4.83143, 0, 5.64828);
+  // PID
+  pid_steering.Init(1.96045, 0.00966393, 18.4001);
   pid_speed.Init(0.5, 0, 0);
-  
-  Twiddler twiddler(500, 9000, 0.16, 0.002, 2, 0.05, pid_steering);
-  //Twiddler twiddler(0, 0, 0, 0, 0, 0, pid_steering);
 
-  h.onMessage([&pid_steering, &pid_speed, &twiddler](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-    const double target_speed = 15;
-    // "42" at the start of the message means there's a websocket message event.
-    // The 4 signifies a websocket message
-    // The 2 signifies a websocket event
-    if (length && length > 2 && data[0] == '4' && data[1] == '2')
-    {
-      auto s = hasData(std::string(data).substr(0, length));
-      if (s != "") {
-        auto j = json::parse(s);
-        std::string event = j[0].get<std::string>();
-        if (event == "telemetry") {
-          // j[1] is the data JSON object
-          double cte = std::stod(j[1]["cte"].get<std::string>());
-          double speed = std::stod(j[1]["speed"].get<std::string>());
-          double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-	  double cte_speed = speed - target_speed;
-          double steer_value;
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
-	  // NOTE: dt is required to calculate the I term and D term of PID controller,
-	  // yet the simulator do not give information of sampling time.
-	  // I've just assumed that each time a message is arrived, 1 second has been passed.
-	  pid_steering.UpdateError(cte);
-	  if (enable_twiddling) {
-	    if (twiddler.IsFinished()) {
-	      std::cout<<"Twiddling done"
-		       <<". Kp: "<<pid_steering.Kp
-		       <<", Ki: "<<pid_steering.Ki
-		       <<", Kd: "<<pid_steering.Kd
-		       <<std::endl;
-	      enable_twiddling = false;
-	    } else {
-	      twiddler.UpdateError(cte);
-	    }
-	  }
-	  pid_speed.UpdateError(cte_speed);
-	  steer_value = pid_steering.GetInputValue(-1, 1);
-	  double throttle = pid_speed.GetInputValue(-1, 1);
-          
-          // DEBUG
-	  /*
-          std::cout << "CTE: "  << cte
-		    << " SV: "  << steer_value
-		    << " Spd: " << speed
-		    << " pe: "  << pid_steering.p_error
-		    << " ie: "  << pid_steering.i_error
-		    << " de: "  << pid_steering.d_error
-		    << std::endl;
-	  */
-	  // Data output for figure
-	  /*
-	    std::cout<<(++i)<<","<<steer_value<<","<<cte<<","
-		   <<(-pid_steering.Kp * pid_steering.p_error)<<","
-		   <<(-pid_steering.Ki * pid_steering.i_error)<<","
-		   <<(-pid_steering.Kd * pid_steering.d_error)<<std::endl;
-	  */
-          json msgJson;
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = throttle;
-          auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          //std::cout << msg << std::endl;
+  //Twiddler twiddler(500, 9000, 0.150637, 0.00126049, 1.26049, 0.05, pid_steering);
+  Twiddler twiddler(500, 9000, 0, 0, 0, -1, pid_steering);
+
+  h.onMessage([&pid_steering, &pid_speed, &twiddler](uWS::WebSocket <uWS::SERVER> ws, char *data, size_t length,
+                                                     uWS::OpCode opCode) {
+      const double target_speed = 15;
+      // "42" at the start of the message means there's a websocket message event.
+      // The 4 signifies a websocket message
+      // The 2 signifies a websocket event
+      if (length && length > 2 && data[0] == '4' && data[1] == '2') {
+        auto s = hasData(std::string(data).substr(0, length));
+        if (s != "") {
+          auto j = json::parse(s);
+          std::string event = j[0].get<std::string>();
+          if (event == "telemetry") {
+            // j[1] is the data JSON object
+            double cte = std::stod(j[1]["cte"].get<std::string>());
+            double speed = std::stod(j[1]["speed"].get<std::string>());
+            double angle = std::stod(j[1]["steering_angle"].get<std::string>());
+            double cte_speed = speed - target_speed;
+            double steer_value;
+            // NOTE: dt is required to calculate the I term and D term of PID controller,
+            // yet the simulator do not give information of sampling time.
+            // I've just assumed that each time a message is arrived, 1 second has been passed.
+            pid_steering.UpdateError(cte);
+            if (enable_twiddling) {
+              if (twiddler.IsFinished()) {
+                std::cout << "Twiddling done"
+                          << ". Kp: " << pid_steering.Kp
+                          << ", Ki: " << pid_steering.Ki
+                          << ", Kd: " << pid_steering.Kd
+                          << std::endl;
+                enable_twiddling = false;
+              } else {
+                twiddler.UpdateError(cte);
+              }
+            }
+            pid_speed.UpdateError(cte_speed);
+            steer_value = pid_steering.GetInputValue(-1, 1);
+            double throttle = pid_speed.GetInputValue(-1, 1);
+
+            // DEBUG
+            /*
+                std::cout << "CTE: "  << cte
+                  << " SV: "  << steer_value
+                  << " Spd: " << speed
+                  << " pe: "  << pid_steering.p_error
+                  << " ie: "  << pid_steering.i_error
+                  << " de: "  << pid_steering.d_error
+                  << std::endl;
+            */
+            // Data output for figure
+            //std::cout<<(++i)<<"    "<<cte<<std::endl;
+            // mean square error
+//            total_square_error += (cte * cte);
+//            ++i;
+//            std::cout<<i<<"    "<<(total_square_error / i)<<std::endl;
+            json msgJson;
+            msgJson["steering_angle"] = steer_value;
+            msgJson["throttle"] = throttle;
+            auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+            //std::cout << msg << std::endl;
+            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          }
+        } else {
+          // Manual driving
+          std::string msg = "42[\"manual\",{}]";
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
-      } else {
-        // Manual driving
-        std::string msg = "42[\"manual\",{}]";
-        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
-    }
   });
 
   // We don't need this since we're not using HTTP but if it's removed the program
   // doesn't compile :-(
   h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t, size_t) {
-    const std::string s = "<h1>Hello world!</h1>";
-    if (req.getUrl().valueLength == 1)
-    {
-      res->end(s.data(), s.length());
-    }
-    else
-    {
-      // i guess this should be done more gracefully?
-      res->end(nullptr, 0);
-    }
+      const std::string s = "<h1>Hello world!</h1>";
+      if (req.getUrl().valueLength == 1) {
+        res->end(s.data(), s.length());
+      } else {
+        // i guess this should be done more gracefully?
+        res->end(nullptr, 0);
+      }
   });
 
-  h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-    std::cout << "Connected!!!" << std::endl;
+  h.onConnection([&h](uWS::WebSocket <uWS::SERVER> ws, uWS::HttpRequest req) {
+      std::cout << "Connected!!!" << std::endl;
   });
 
-  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
-    ws.close();
-    std::cout << "Disconnected" << std::endl;
+  h.onDisconnection([&h](uWS::WebSocket <uWS::SERVER> ws, int code, char *message, size_t length) {
+      ws.close();
+      std::cout << "Disconnected" << std::endl;
   });
 
   int port = 4567;
-  if (h.listen(port))
-  {
+  if (h.listen(port)) {
     std::cout << "Listening to port " << port << std::endl;
-  }
-  else
-  {
+  } else {
     std::cerr << "Failed to listen to port" << std::endl;
     return -1;
   }

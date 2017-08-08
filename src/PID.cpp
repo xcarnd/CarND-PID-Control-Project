@@ -1,11 +1,5 @@
 #include "PID.h"
 
-using namespace std;
-
-/*
-* TODO: Complete the PID class.
-*/
-
 PID::PID()
   : p_error(0.0),
     i_error(0.0),
