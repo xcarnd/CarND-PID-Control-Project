@@ -39,16 +39,16 @@ int main() {
 
   PID pid_steering;
   PID pid_speed;
-  // PID
-  pid_steering.Init(1.96045, 0.00966393, 18.4001);
+  pid_steering.Init(0.243213, 3.28273e-05, 9.04122);
   pid_speed.Init(0.5, 0, 0);
 
   //Twiddler twiddler(500, 9000, 0.150637, 0.00126049, 1.26049, 0.05, pid_steering);
-  Twiddler twiddler(500, 9000, 0, 0, 0, -1, pid_steering);
+  //Twiddler twiddler(300, 3700, 0.0970299, 7.93881e-07, 0.88209, 1e-4, pid_steering);
+  Twiddler twiddler(1, 1, 0, 0, 0, 1e-4, pid_steering);
 
   h.onMessage([&pid_steering, &pid_speed, &twiddler](uWS::WebSocket <uWS::SERVER> ws, char *data, size_t length,
                                                      uWS::OpCode opCode) {
-      const double target_speed = 15;
+      const double target_speed = 40;
       // "42" at the start of the message means there's a websocket message event.
       // The 4 signifies a websocket message
       // The 2 signifies a websocket event
@@ -101,11 +101,16 @@ int main() {
 //            ++i;
 //            std::cout<<i<<"    "<<(total_square_error / i)<<std::endl;
             json msgJson;
-            msgJson["steering_angle"] = steer_value;
-            msgJson["throttle"] = throttle;
-            auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+	    if (twiddler.IsRoundEnd(true)) {
+	      std::string msg = "42[\"reset\",{}]";
+	      ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+	    } else {
+	      msgJson["steering_angle"] = steer_value;
+	      msgJson["throttle"] = throttle;
+	      auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+	      ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
             //std::cout << msg << std::endl;
-            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+	    }
           }
         } else {
           // Manual driving

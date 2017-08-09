@@ -11,16 +11,17 @@ static const int D_DOWN = 5;
 
 using namespace std;
 
-Twiddler::Twiddler(int num_skip, int num_avg, double dp, double di, double dd, double threshold, PID& pid)
+Twiddler::Twiddler(int num_skip, int num_avg, double dp, double di, double dd, double threshold, PID& pid, double best_cte)
   : dp(dp),
     di(di),
     dd(dd),
     threshold(threshold),
-    best_error(numeric_limits<double>::max()),
+    best_error(best_cte),
     num_skip(num_skip),
     num_avg(num_avg),
     counter(0),
     total_error(0.0),
+    roundEnd(false),
     pid(pid) {
   state = P_UP;
   pid.Kp += dp;
@@ -121,6 +122,7 @@ void Twiddler::UpdateError(double cte) {
 	     <<std::endl;
     
     // reset counter and error for the next twiddle round.
+    roundEnd = true;
     counter = 0;
     total_error = 0.0;
     pid.total_cte = 0.0;
@@ -134,4 +136,12 @@ void Twiddler::UpdateError(double cte) {
 
 bool Twiddler::IsFinished() {
   return (dp + di + dd) < threshold;
+}
+
+bool Twiddler::IsRoundEnd(bool reset) {
+  bool ret = roundEnd;
+  if (reset) {
+    roundEnd = false;
+  }
+  return ret;
 }

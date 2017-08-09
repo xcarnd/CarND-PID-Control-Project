@@ -2,6 +2,7 @@
 #define TWIDDLER_H
 
 #include "PID.h"
+#include <limits>
 
 class Twiddler {
  private:
@@ -20,15 +21,19 @@ class Twiddler {
 
   int state;
 
+  bool roundEnd;
+
   PID& pid;
 
  public:
 
-  Twiddler(int num_skip, int num_avg, double dp, double di, double dd, double threshold, PID& pid);
+  Twiddler(int num_skip, int num_avg, double dp, double di, double dd, double threshold, PID& pid, double best_cte = std::numeric_limits<double>::max());
   
   void UpdateError(double cte);
 
   bool IsFinished();
+
+  bool IsRoundEnd(bool reset);
   
 };
 
