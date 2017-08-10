@@ -15,7 +15,7 @@ double deg2rad(double x) { return x * pi() / 180; }
 
 double rad2deg(double x) { return x * 180 / pi(); }
 
-static bool enable_twiddling = false;
+static bool enable_twiddling = true;
 static int i = 0;
 static double total_square_error = 0;
 
@@ -39,12 +39,12 @@ int main() {
 
   PID pid_steering;
   PID pid_speed;
-  pid_steering.Init(0.243213, 3.28273e-05, 9.04122);
+  pid_steering.Init(0.304318, 4.51522e-05, 9.0389);
   pid_speed.Init(0.5, 0, 0);
 
   //Twiddler twiddler(500, 9000, 0.150637, 0.00126049, 1.26049, 0.05, pid_steering);
   //Twiddler twiddler(300, 3700, 0.0970299, 7.93881e-07, 0.88209, 1e-4, pid_steering);
-  Twiddler twiddler(1, 1, 0, 0, 0, 1e-4, pid_steering);
+  Twiddler twiddler(300, 4700, 0.01, 1e-5, 0.01, 1e-4, pid_steering);
 
   h.onMessage([&pid_steering, &pid_speed, &twiddler](uWS::WebSocket <uWS::SERVER> ws, char *data, size_t length,
                                                      uWS::OpCode opCode) {
